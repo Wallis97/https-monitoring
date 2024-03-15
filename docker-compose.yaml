@@ -1,0 +1,47 @@
+services:
+  web:
+    image: enigma-rekr-nginx:0.1
+    build: .
+    container_name: nginx-https-server
+    ports:
+      - "443:443"
+    restart: always
+    volumes: 
+      - ./html/:/opt/www/:ro     # pass the web page content
+      - ./nginx/:/etc/nginx/:ro  # pass the configuration to the container
+    tty: true
+  exporter:
+    image: nginx/nginx-prometheus-exporter:1.1.0
+    container_name: prometheus-exporter
+    ports:
+      - "9113:9113"
+    depends_on: [ web ]
+    command:
+      - "-nginx.scrape-uri=https://nginx-https-server:443/metrics"
+      - "-web.telemetry-path=/metrics"
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+    volumes:
+      - ./prometheus:/etc/prometheus:ro 
+      - ./nginx/ssl:/etc/nginx/ssl/:ro
+      - prom_data:/prometheus
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=grafana
+    volumes:
+      - ./grafana/:/etc/grafana/provisioning/datasources
+    depends_on: [prometheus]
+volumes:
+  prom_data: {}
