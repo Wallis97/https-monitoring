@@ -46,3 +46,6 @@ services:
     depends_on: [ prometheus ]
 volumes:
   prom_data: {}
+networks:
+  backend:
+    driver: bridge
